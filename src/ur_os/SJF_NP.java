@@ -1,9 +1,9 @@
 package ur_os;
-
 /**
  *
  * @author prestamour
  */
+import static ur_os.InterruptType.SCHEDULER_RQ_TO_CPU;
 public class SJF_NP extends Scheduler{
 
     @SuppressWarnings("unused")
@@ -32,48 +32,37 @@ public void getNext(boolean cpuEmpty) {
     Process shortest = processes.getFirst();
 
     // Recorremos todos los procesos de la Ready Queue
-    for(Process p : processes){
+    for (Process p : processes) {
+            if (p.getRemainingTimeInCurrentBurst() <
+                shortest.getRemainingTimeInCurrentBurst()) {
 
-        // Tiempo restante del proceso que estamos evaluando
-        int remainingP = p.getRemainingTimeInCurrentBurst();
+                shortest = p;
 
-        // Tiempo restante del proceso más corto encontrado hasta ahora
-        int remainingShortest = shortest.getRemainingTimeInCurrentBurst();
+            } else if (p.getRemainingTimeInCurrentBurst() ==
+                       shortest.getRemainingTimeInCurrentBurst()) {
 
-        // Si encontramos un proceso con menor tiempo de CPU
-        if(remainingP < remainingShortest){
-
-            // se convierte en el nuevo proceso más corto
-            shortest = p;
-
-        // Si tienen el mismo tiempo usamos el tie breaker del sistema
-        }else if(remainingP == remainingShortest){
-
-            shortest = tieBreaker(shortest, p);
-
+                shortest = tieBreaker(shortest, p);
+            }
         }
-    }
 
-    // Removemos el proceso seleccionado de la Ready Queue
-    removeProcess(shortest);
+        // Removerlo de la Ready Queue
+        processes.remove(shortest);
 
-    // Lo enviamos al CPU usando una interrupción del scheduler
-    os.interrupt(InterruptType.SCHEDULER_RQ_TO_CPU, shortest);
+        // Enviarlo al CPU
+        os.interrupt(SCHEDULER_RQ_TO_CPU, shortest);
+
+        // Contar el cambio de contexto
+        addContextSwitch();
 }
     
     @Override
     public void newProcess(boolean cpuEmpty) {
-          System.out.println("SJF_NP getNext llamado. cpuEmpty=" + cpuEmpty);
-       if(cpuEmpty){
-        getNext(true);
-        }
+      
     } //Non-preemtive
 
     @Override
     public void IOReturningProcess(boolean cpuEmpty) {
-         if(cpuEmpty){
-        getNext(true);
-    }
+ 
     } //Non-preemtive
     
 }
