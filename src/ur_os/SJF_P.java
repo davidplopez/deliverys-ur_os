@@ -39,19 +39,21 @@ public class SJF_P extends Scheduler {
         }
 
         Process running = os.getProcessInCPU();
-        if (running != null) {
-            int pRemaining = p.getRemainingTimeInCurrentBurst();
-            int runningRemaining = running.getRemainingTimeInCurrentBurst();
-
-            if (pRemaining < runningRemaining
-                    || (pRemaining == runningRemaining && tieBreaker(running, p) == p)) {
-                os.interrupt(InterruptType.SCHEDULER_CPU_TO_RQ, p);
-                return;
-            }
+        if (running != null && shouldPreempt(running, p)) {
+            os.interrupt(InterruptType.SCHEDULER_CPU_TO_RQ, p);
+            return;
         }
 
         p.setState(ProcessState.READY);
         processes.add(p);
+    }
+
+    private boolean shouldPreempt(Process running, Process incoming) {
+        int incomingRemaining = incoming.getRemainingTimeInCurrentBurst();
+        int runningRemaining = running.getRemainingTimeInCurrentBurst();
+
+        return incomingRemaining < runningRemaining
+                || (incomingRemaining == runningRemaining && tieBreaker(running, incoming) == incoming);
     }
 
     @Override
