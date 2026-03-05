@@ -1,4 +1,5 @@
 package ur_os;
+
 import java.util.Comparator;
 
 public class SJF_P extends Scheduler {
@@ -7,77 +8,61 @@ public class SJF_P extends Scheduler {
         super(os);
     }
 
+    //  Seleccionar el siguiente proceso y pasarlo a la CPU
     @Override
     public void getNext(boolean cpuEmpty) {
+        CPU cpu = os.cpu; // accedemos al CPU del sistema
 
-        if (!cpuEmpty || processes.isEmpty())
-            return;
+        if (cpuEmpty && !processes.isEmpty()) {
+            // Buscar el proceso con MENOR burst
+            Process next = processes.stream()
+                    .min(Comparator.comparingInt(Process::getBurstTime))
+                    .orElse(null);
 
-        Process shortest = processes.stream()
-                .min(Comparator.comparingInt(Process::getRemainingTimeInCurrentBurst))
-                .orElse(null);
-
-        if (shortest != null) {
-            removeProcess(shortest);
-            //addContextSwitch();
-            os.interrupt(InterruptType.SCHEDULER_RQ_TO_CPU, shortest);
+            if (next != null) {
+                processes.remove(next);    // lo saco de la cola de listos
+                cpu.addProcess(next);      // lo meto en la CPU
+                addContextSwitch();
+            }
         }
     }
 
+    //  Cuando entra un proceso nuevo
     @Override
-public void newProcess(boolean cpuEmpty) {
+    public void newProcess(boolean cpuEmpty) {
+        CPU cpu = os.cpu;
 
-    if (processes.isEmpty())
-        return;
+        if (!cpu.isEmpty()) {
+            Process running = cpu.getProcess(); // el que está corriendo ahora
 
-    if (os.isCPUEmpty()) {
-        getNext(true);
-        return;
+            // Buscar el más corto en la cola de listos
+            Process shortest = processes.stream()
+                    .min(Comparator.comparingInt(Process::getBurstTime))
+                    .orElse(null);
+
+            if (shortest != null && shortest.getBurstTime() < running.getBurstTime()) {
+                // Preemption sacar el que está corriendo
+                cpu.extractProcess();
+                processes.add(running);
+
+                // Ejecutar el más corto
+                processes.remove(shortest);
+                cpu.addProcess(shortest);
+                addContextSwitch();
+            }
+        } else {
+            getNext(true);
+        }
     }
 
-    Process running = os.getProcessInCPU();
-
-    Process shortest = processes.stream()
-            .min(Comparator.comparingInt(Process::getRemainingTimeInCurrentBurst))
-            .orElse(null);
-
-    if (shortest == null)
-        return;
-
-    if (shortest.getRemainingTimeInCurrentBurst()
-            < running.getRemainingTimeInCurrentBurst()) {
-
-        
-        os.interrupt(
-            InterruptType.SCHEDULER_CPU_TO_RQ,
-            running
-        );
-
-      
-        removeProcess(shortest);
-
-        
-        os.interrupt(
-            InterruptType.SCHEDULER_RQ_TO_CPU,
-            shortest
-        );
-    }
-}
-
+    // Cuando un proceso vuelve de I/O
     @Override
     public void IOReturningProcess(boolean cpuEmpty) {
-        newProcess(cpuEmpty);
+        newProcess(cpuEmpty); // misma lógica que newProcess
     }
+
     @Override
-public void update() {
-
-    boolean cpuEmpty = os.isCPUEmpty();
-
-    if (cpuEmpty) {
-        getNext(true);
-    } else {
-       
-        newProcess(false);
+    public String toString() {
+        return "SJF_P ReadyQueue: " + processes.toString();
     }
-}
 }
