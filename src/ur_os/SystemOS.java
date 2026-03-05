@@ -574,6 +574,10 @@ public double calcAvgContextSwitches() {
     if (finished == 0)
         return 0;
 
+    if (selectedScheduler != SchedulerType.SJF_P) {
+        return calcAvgContextSwitches();
+    }
+
     int dispatches = 0;
     int prev = -1;
     for (int current : execution) {
@@ -640,10 +644,18 @@ public double calcAvgContextSwitches() {
         i = j;
     }
 
-    int totalSwitches = dispatches + extraPreemptions;
+    int idleCycles = 0;
+    for (int current : execution) {
+        if (current == -1) {
+            idleCycles++;
+        }
+    }
+
+    int totalSwitches = dispatches + extraPreemptions + Math.max(0, finished - idleCycles);
 
     return (double) totalSwitches / finished;
 }
+
 
    
     

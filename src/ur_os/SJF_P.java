@@ -1,5 +1,4 @@
 package ur_os;
-import java.util.Comparator;
 
 public class SJF_P extends Scheduler {
 
@@ -7,63 +6,80 @@ public class SJF_P extends Scheduler {
         super(os);
     }
 
+    private Process getShortestProcessInReadyQueue() {
+        if (processes.isEmpty()) {
+            return null;
+        }
+
+        Process shortest = processes.getFirst();
+        for (Process p : processes) {
+            if (p.getRemainingTimeInCurrentBurst() < shortest.getRemainingTimeInCurrentBurst()) {
+                shortest = p;
+            } else if (p.getRemainingTimeInCurrentBurst() == shortest.getRemainingTimeInCurrentBurst()) {
+                shortest = tieBreaker(shortest, p);
+            }
+        }
+
+        return shortest;
+    }
+
     @Override
     public void addProcess(Process p) {
-        p.setState(ProcessState.READY);
-        processes.add(p);
+        if (p.getState() == ProcessState.CPU) {
+            p.setState(ProcessState.READY);
+            processes.add(p);
+            return;
+        }
 
         if (os.isCPUEmpty()) {
+            p.setState(ProcessState.READY);
+            processes.add(p);
             getNext(true);
             return;
         }
 
         Process running = os.getProcessInCPU();
-        if (running == null) {
-            return;
+        if (running != null) {
+            int pRemaining = p.getRemainingTimeInCurrentBurst();
+            int runningRemaining = running.getRemainingTimeInCurrentBurst();
+
+            if (pRemaining < runningRemaining
+                    || (pRemaining == runningRemaining && tieBreaker(running, p) == p)) {
+                os.interrupt(InterruptType.SCHEDULER_CPU_TO_RQ, p);
+                return;
+            }
         }
 
-        if (p.getRemainingTimeInCurrentBurst() < running.getRemainingTimeInCurrentBurst()) {
-            os.interrupt(InterruptType.SCHEDULER_CPU_TO_RQ, running);
-            removeProcess(p);
-            os.interrupt(InterruptType.SCHEDULER_RQ_TO_CPU, p);
-        }
+        p.setState(ProcessState.READY);
+        processes.add(p);
     }
 
     @Override
     public void getNext(boolean cpuEmpty) {
-
-        if (!cpuEmpty || processes.isEmpty())
+        if (!cpuEmpty || processes.isEmpty()) {
             return;
+        }
 
-        Process shortest = processes.stream()
-                .min(Comparator.comparingInt(Process::getRemainingTimeInCurrentBurst))
-                .orElse(null);
+        Process shortest = getShortestProcessInReadyQueue();
 
         if (shortest != null) {
             removeProcess(shortest);
-            //addContextSwitch();
             os.interrupt(InterruptType.SCHEDULER_RQ_TO_CPU, shortest);
         }
     }
 
     @Override
     public void newProcess(boolean cpuEmpty) {
-        if (cpuEmpty) {
-            getNext(true);
-        }
     }
 
     @Override
     public void IOReturningProcess(boolean cpuEmpty) {
-        newProcess(cpuEmpty);
     }
+
     @Override
-public void update() {
-
-    boolean cpuEmpty = os.isCPUEmpty();
-
-    if (cpuEmpty) {
-        getNext(true);
+    public void update() {
+        if (os.isCPUEmpty()) {
+            getNext(true);
+        }
     }
-}
 }
