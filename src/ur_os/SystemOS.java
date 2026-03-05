@@ -644,6 +644,25 @@ public double calcAvgContextSwitches2() {
 
     return (double) totalSwitches / finished;
 }
+
+     
+    public double calcResponseTime() {
+        
+        int finished = 0;
+    double sum = 0;
+
+    for (Process p : processes) {
+        if (p.isFinished()) {
+            sum += (p.getFirstExecutionTime() - p.getTime_init());
+            finished++;
+        }
+    }
+
+    if (finished == 0) return 0;
+
+    return sum / finished;
+
+    }
         public void compareFiles(String filePath1, String filePath2) {
         try (BufferedReader reader1 = new BufferedReader(new FileReader(filePath1));
              BufferedReader reader2 = new BufferedReader(new FileReader(filePath2))) {
