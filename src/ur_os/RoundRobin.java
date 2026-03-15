@@ -48,7 +48,7 @@ public class RoundRobin extends Scheduler{
 
             //System.out.println(pro.pid);
         //}
-        //System.out.print(currentq);
+        System.out.print("q:"+currentq);
 
         if (cpuEmpty){
             currentq=q;
@@ -57,20 +57,23 @@ public class RoundRobin extends Scheduler{
             this.removeProcess(this.processes.getFirst());
             currentq=currentq-1;
             //System.out.print(currentq);
-            //System.out.println("onif");
+            System.out.println("onif");
 
 
 
 
         } else{
-            //System.out.println("onelse");
+
 
                 if (currentq==0 && this.os.getProcessInCPU().getRemainingTimeInCurrentBurst()>=1){
-                    this.os.interrupt(InterruptType.SCHEDULER_CPU_TO_RQ,this.os.getProcessInCPU());
+                    System.out.println("onelse");
+                    this.os.interrupt(InterruptType.SCHEDULER_CPU_TO_RQ,null);
+                    currentq=q;
 
 
 
-                    this.getNext(true);
+                    this.os.rq.update();
+
 
 
                 } else{
