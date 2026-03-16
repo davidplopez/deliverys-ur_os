@@ -63,6 +63,7 @@ public class PriorityQueue extends Scheduler {
 
         if (currentScheduler == -1)
             return;
+
         if (cpuEmpty) {
             schedulers.get(currentScheduler).getNext(true);
             return;
@@ -95,14 +96,19 @@ public class PriorityQueue extends Scheduler {
             }
             return;
         }
-    scheduler.getNext(false);
+
+        scheduler.getNext(false);
     }
 
     @Override
-    public void newProcess(boolean cpuEmpty) { }
+    public void newProcess(boolean cpuEmpty) {
+
+    }
 
     @Override
     public void IOReturningProcess(boolean cpuEmpty) {
+
         newProcess(cpuEmpty);
+
     }
 }
